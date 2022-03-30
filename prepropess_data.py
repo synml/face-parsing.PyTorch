@@ -1,15 +1,17 @@
-#!/usr/bin/python
-# -*- encoding: utf-8 -*-
-
 import os.path as osp
 import os
 import cv2
 from transform import *
 from PIL import Image
 
-face_data = '/home/zll/data/CelebAMask-HQ/CelebA-HQ-img'
-face_sep_mask = '/home/zll/data/CelebAMask-HQ/CelebAMask-HQ-mask-anno'
-mask_path = '/home/zll/data/CelebAMask-HQ/mask'
+# 데이터셋 폴더 위치를 지정하세요.
+dataset_dir = 'D:\\data\\CelebAMask-HQ'
+
+face_data = os.path.join(dataset_dir, 'CelebAMask-HQ-img')
+face_sep_mask = os.path.join(dataset_dir, 'CelebAMask-HQ-mask-anno')
+mask_path = os.path.join(dataset_dir, 'mask')
+os.makedirs(mask_path, exist_ok=True)
+
 counter = 0
 total = 0
 for i in range(15):

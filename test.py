@@ -1,17 +1,12 @@
-#!/usr/bin/python
-# -*- encoding: utf-8 -*-
-
-from logger import setup_logger
 from model import BiSeNet
-
 import torch
-
 import os
 import os.path as osp
 import numpy as np
 from PIL import Image
 import torchvision.transforms as transforms
 import cv2
+
 
 def vis_parsing_maps(im, parsing_anno, stride, save_im=False, save_path='vis_results/parsing_map_on_im.jpg'):
     # Colors for all 20 parts
@@ -43,21 +38,20 @@ def vis_parsing_maps(im, parsing_anno, stride, save_im=False, save_path='vis_res
 
     # Save result or not
     if save_im:
-        cv2.imwrite(save_path[:-4] +'.png', vis_parsing_anno)
+        cv2.imwrite(save_path[:-4] + '.png', vis_parsing_anno)
         cv2.imwrite(save_path, vis_im, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
     # return vis_im
 
-def evaluate(respth='./res/test_res', dspth='./data', cp='model_final_diss.pth'):
 
+def evaluate(respth, dspth, cp):
     if not os.path.exists(respth):
         os.makedirs(respth)
 
     n_classes = 19
     net = BiSeNet(n_classes=n_classes)
     net.cuda()
-    save_pth = osp.join('res/cp', cp)
-    net.load_state_dict(torch.load(save_pth))
+    net.load_state_dict(torch.load(cp))
     net.eval()
 
     to_tensor = transforms.Compose([
@@ -79,12 +73,8 @@ def evaluate(respth='./res/test_res', dspth='./data', cp='model_final_diss.pth')
             vis_parsing_maps(image, parsing, stride=1, save_im=True, save_path=osp.join(respth, image_path))
 
 
-
-
-
-
-
 if __name__ == "__main__":
-    evaluate(dspth='/home/zll/data/CelebAMask-HQ/test-img', cp='79999_iter.pth')
-
-
+    data_dir = 'data'
+    dspth = 'test_result'
+    cp = 'res/79999_iter.pth'
+    evaluate(data_dir, dspth, cp)
