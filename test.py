@@ -44,9 +44,9 @@ def vis_parsing_maps(im, parsing_anno, stride, save_im=False, save_path='vis_res
     # return vis_im
 
 
-def evaluate(respth, dspth, cp):
-    if not os.path.exists(respth):
-        os.makedirs(respth)
+def evaluate(dspth, respth, cp):
+    os.makedirs(respth, exist_ok=True)
+    os.makedirs(dspth, exist_ok=True)
 
     n_classes = 19
     net = BiSeNet(n_classes=n_classes)
@@ -75,6 +75,6 @@ def evaluate(respth, dspth, cp):
 
 if __name__ == "__main__":
     data_dir = 'data'
-    dspth = 'test_result'
+    result_dir = 'test_result'
     cp = 'res/79999_iter.pth'
-    evaluate(data_dir, dspth, cp)
+    evaluate(data_dir, result_dir, cp)
