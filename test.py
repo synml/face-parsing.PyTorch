@@ -74,7 +74,9 @@ def evaluate(dspth, respth, cp):
 
 
 if __name__ == "__main__":
+    # 사용할 가중치 파일을 지정하세요.
+    cp = 'res/79999_iter.pth'
+
     data_dir = 'data'
     result_dir = 'test_result'
-    cp = 'res/79999_iter.pth'
     evaluate(data_dir, result_dir, cp)
