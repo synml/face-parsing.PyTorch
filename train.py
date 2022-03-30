@@ -8,14 +8,13 @@ from optimizer import Optimizer
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import torch.distributed as dist
 
 import os
 import os.path as osp
 import logging
 import time
 import datetime
-import argparse
+import tqdm
 
 respth = './res'
 if not osp.exists(respth):
@@ -23,41 +22,19 @@ if not osp.exists(respth):
 logger = logging.getLogger()
 
 
-def parse_args():
-    parse = argparse.ArgumentParser()
-    parse.add_argument(
-        '--local_rank',
-        dest='local_rank',
-        type=int,
-        default=-1,
-    )
-    return parse.parse_args()
-
-
-def train():
-    args = parse_args()
-    torch.cuda.set_device(args.local_rank)
-    dist.init_process_group(
-        backend='nccl',
-        init_method='tcp://127.0.0.1:33241',
-        world_size=torch.cuda.device_count(),
-        rank=args.local_rank
-    )
+def train(root):
     setup_logger(respth)
 
     # dataset
     n_classes = 19
-    n_img_per_gpu = 16
-    n_workers = 8
+    batch_size = 8
+    n_workers = 0
     cropsize = [448, 448]
-    data_root = '/home/zll/data/CelebAMask-HQ/'
 
-    ds = FaceMask(data_root, cropsize=cropsize, mode='train')
-    sampler = torch.utils.data.distributed.DistributedSampler(ds)
+    ds = FaceMask(root, cropsize=cropsize, mode='train')
     dl = DataLoader(ds,
-                    batch_size=n_img_per_gpu,
-                    shuffle=False,
-                    sampler=sampler,
+                    batch_size=batch_size,
+                    shuffle=True,
                     num_workers=n_workers,
                     pin_memory=True,
                     drop_last=True)
@@ -67,12 +44,8 @@ def train():
     net = BiSeNet(n_classes=n_classes)
     net.cuda()
     net.train()
-    net = nn.parallel.DistributedDataParallel(net,
-                                              device_ids=[args.local_rank, ],
-                                              output_device=args.local_rank
-                                              )
     score_thres = 0.7
-    n_min = n_img_per_gpu * cropsize[0] * cropsize[1] // 16
+    n_min = batch_size * cropsize[0] * cropsize[1] // 16
     LossP = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_idx)
     Loss2 = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_idx)
     Loss3 = OhemCELoss(thresh=score_thres, n_min=n_min, ignore_lb=ignore_idx)
@@ -86,7 +59,7 @@ def train():
     warmup_steps = 1000
     warmup_start_lr = 1e-5
     optim = Optimizer(
-        model=net.module,
+        model=net,
         lr0=lr_start,
         momentum=momentum,
         wd=weight_decay,
@@ -101,14 +74,13 @@ def train():
     st = glob_st = time.time()
     diter = iter(dl)
     epoch = 0
-    for it in range(max_iter):
+    for it in tqdm.tqdm(range(max_iter), 'Train'):
         try:
             im, lb = next(diter)
-            if not im.size()[0] == n_img_per_gpu:
+            if not im.size()[0] == batch_size:
                 raise StopIteration
         except StopIteration:
             epoch += 1
-            sampler.set_epoch(epoch)
             diter = iter(dl)
             im, lb = next(diter)
         im = im.cuda()
@@ -152,21 +124,22 @@ def train():
             logger.info(msg)
             loss_avg = []
             st = ed
-        if dist.get_rank() == 0:
-            if (it + 1) % 5000 == 0:
-                state = net.module.state_dict() if hasattr(net, 'module') else net.state_dict()
-                if dist.get_rank() == 0:
-                    torch.save(state, './res/cp/{}_iter.pth'.format(it))
-                evaluate(dspth='/home/zll/data/CelebAMask-HQ/test-img', cp='{}_iter.pth'.format(it))
+        if (it + 1) % 5000 == 0:
+            state = net.module.state_dict() if hasattr(net, 'module') else net.state_dict()
+            torch.save(state, './res/{}_iter.pth'.format(it))
+            os.makedirs(root + 'training', exist_ok=True)
+            evaluate(dspth=root + 'training', cp='{}_iter.pth'.format(it))
 
     #  dump the final model
     save_pth = osp.join(respth, 'model_final_diss.pth')
     # net.cpu()
     state = net.module.state_dict() if hasattr(net, 'module') else net.state_dict()
-    if dist.get_rank() == 0:
-        torch.save(state, save_pth)
+    torch.save(state, save_pth)
     logger.info('training done, model saved to: {}'.format(save_pth))
 
 
 if __name__ == "__main__":
-    train()
+    # 데이터셋 폴더 위치를 지정하세요.
+    dataset_dir = 'D:\\data\\CelebAMask-HQ'
+
+    train(dataset_dir)
