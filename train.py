@@ -113,7 +113,6 @@ def train():
             im, lb = next(diter)
         im = im.cuda()
         lb = lb.cuda()
-        H, W = im.size()[2:]
         lb = torch.squeeze(lb, 1)
 
         optim.zero_grad()
@@ -157,7 +156,6 @@ def train():
                 state = net.module.state_dict() if hasattr(net, 'module') else net.state_dict()
                 if dist.get_rank() == 0:
                     torch.save(state, './res/cp/{}_iter.pth'.format(it))
-                evaluate(dspth='/home/zll/data/CelebAMask-HQ/test-img', cp='{}_iter.pth'.format(it))
 
     #  dump the final model
     save_pth = osp.join(respth, 'model_final_diss.pth')
