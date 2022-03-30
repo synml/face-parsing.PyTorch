@@ -1,19 +1,13 @@
-#!/usr/bin/python
-# -*- encoding: utf-8 -*-
-
 from logger import setup_logger
 from model import BiSeNet
 from face_dataset import FaceMask
 from loss import OhemCELoss
 from evaluate import evaluate
 from optimizer import Optimizer
-import cv2
-import numpy as np
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import torch.nn.functional as F
 import torch.distributed as dist
 
 import os
