@@ -25,7 +25,7 @@ def main(args):
     counter = 0
     total = 0
     for i in tqdm.tqdm(range(15), desc='Preprocess'):
-        for j in tqdm.tqdm(range(i * 2000, (i + 1) * 2000), 'Subset'):
+        for j in tqdm.tqdm(range(i * 2000, (i + 1) * 2000), 'Subset', leave=False):
             mask = np.zeros((512, 512))
             for index, attr in enumerate(attributes, 1):
                 total += 1
