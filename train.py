@@ -1,20 +1,20 @@
-from logger import setup_logger
-from model import BiSeNet
-from face_dataset import FaceMask
-from loss import OhemCELoss
-from evaluate import evaluate
-from optimizer import Optimizer
-
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-
+import argparse
+import datetime
+import logging
 import os
 import os.path as osp
-import logging
 import time
-import datetime
+
+import torch
 import tqdm
+from torch.utils.data import DataLoader
+
+from evaluate import evaluate
+from face_dataset import FaceMask
+from logger import setup_logger
+from loss import OhemCELoss
+from model import BiSeNet
+from optimizer import Optimizer
 
 respth = './res'
 if not osp.exists(respth):
@@ -22,7 +22,7 @@ if not osp.exists(respth):
 logger = logging.getLogger()
 
 
-def train(root):
+def train(args):
     setup_logger(respth)
 
     # dataset
@@ -31,7 +31,7 @@ def train(root):
     n_workers = 0
     cropsize = [448, 448]
 
-    ds = FaceMask(root, cropsize=cropsize, mode='train')
+    ds = FaceMask(args.dataset_dir, cropsize=cropsize, mode='train')
     dl = DataLoader(ds,
                     batch_size=batch_size,
                     shuffle=True,
@@ -127,8 +127,8 @@ def train(root):
         if (it + 1) % 5000 == 0:
             state = net.module.state_dict() if hasattr(net, 'module') else net.state_dict()
             torch.save(state, './res/{}_iter.pth'.format(it))
-            os.makedirs(root + 'training', exist_ok=True)
-            evaluate(dspth=root + 'training', cp='{}_iter.pth'.format(it))
+            os.makedirs(args.dataset_dir + 'training', exist_ok=True)
+            evaluate(dspth=args.dataset_dir + 'training', cp='{}_iter.pth'.format(it))
 
     #  dump the final model
     save_pth = osp.join(respth, 'model_final_diss.pth')
@@ -138,8 +138,13 @@ def train(root):
     logger.info('training done, model saved to: {}'.format(save_pth))
 
 
-if __name__ == "__main__":
-    # 데이터셋 폴더 위치를 지정하세요.
-    dataset_dir = 'D:\\data\\CelebAMask-HQ'
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_dir', type=str, required=True)
+    args = parser.parse_args()
+    return args
 
-    train(dataset_dir)
+
+if __name__ == "__main__":
+    args = parse_args()
+    train(args)
